@@ -1,5 +1,7 @@
 import streamlit as st
 import pandas as pd
+import folium
+from streamlit.components.v1 import html
 
 st.set_page_config(
     page_title="Town Moor Survey App",
@@ -42,7 +44,7 @@ df = load_points()
 
 st.title("📍 Town Moor Survey App")
 
-st.write("Enter a survey control point ID to view its location and navigation link.")
+st.write("Enter a survey control point ID to view its location.")
 
 point_id = st.text_input(
     "Enter Point ID",
@@ -71,3 +73,28 @@ if st.button("Find Point"):
 
             maps_url = f"https://www.google.com/maps?q={p['Latitude']},{p['Longitude']}"
             st.link_button("📍 Open in Google Maps", maps_url)
+
+            m = folium.Map(
+                location=[p["Latitude"], p["Longitude"]],
+                zoom_start=20,
+                tiles=None
+            )
+
+            folium.TileLayer(
+                tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+                attr="Esri World Imagery",
+                name="Satellite"
+            ).add_to(m)
+
+            folium.CircleMarker(
+                location=[p["Latitude"], p["Longitude"]],
+                radius=8,
+                color="red",
+                fill=True,
+                fill_color="yellow",
+                fill_opacity=1,
+                weight=3,
+                tooltip=p["Point ID"]
+            ).add_to(m)
+
+            html(m._repr_html_(), height=500)
