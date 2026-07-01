@@ -1,4 +1,5 @@
 import streamlit as st
+import pandas as pd
 
 st.set_page_config(
     page_title="Town Moor Survey App",
@@ -6,20 +7,42 @@ st.set_page_config(
     layout="centered"
 )
 
-POINTS = {
-    "TM NEW 1": {
-        "lat": 54.98384177,
-        "lon": -1.61922471,
-        "height": 115.446,
-    },
-    "TM NEW 2": {
-        "lat": 54.98383113,
-        "lon": -1.61862891,
-        "height": 114.772,
-    },
-}
+@st.cache_data
+def load_points():
+    df = pd.read_csv("Town_Moor_Coordinates.csv", header=1)
+
+    df.columns = [
+        "Point ID",
+        "Lat_DD",
+        "Lat_MM",
+        "Lat_SS",
+        "Lon_DD",
+        "Lon_MM",
+        "Lon_SS",
+        "Height"
+    ]
+
+    df["Point ID"] = df["Point ID"].astype(str).str.strip().str.upper()
+
+    df["Latitude"] = (
+        df["Lat_DD"]
+        + df["Lat_MM"] / 60
+        + df["Lat_SS"] / 3600
+    )
+
+    df["Longitude"] = -(
+        abs(df["Lon_DD"])
+        + df["Lon_MM"] / 60
+        + df["Lon_SS"] / 3600
+    )
+
+    return df
+
+df = load_points()
 
 st.title("📍 Town Moor Survey App")
+
+st.write("Enter a survey control point ID to view its location and navigation link.")
 
 point_id = st.text_input(
     "Enter Point ID",
@@ -27,20 +50,24 @@ point_id = st.text_input(
 ).strip().upper()
 
 if st.button("Find Point"):
-    if point_id in POINTS:
-        p = POINTS[point_id]
 
-        st.success(f"Point found: {point_id}")
-
-        st.write(f"**Latitude:** {p['lat']}")
-        st.write(f"**Longitude:** {p['lon']}")
-        st.write(f"**Ellipsoidal height:** {p['height']} m")
-
-        maps_url = f"https://www.google.com/maps?q={p['lat']},{p['lon']}"
-        st.link_button("📍 Open in Google Maps", maps_url)
-
-    elif point_id == "":
+    if point_id == "":
         st.warning("Please enter a Point ID.")
 
     else:
-        st.error("Point not found. Check the Point ID.")
+        result = df[df["Point ID"] == point_id]
+
+        if result.empty:
+            st.error("Point not found. Check the Point ID.")
+
+        else:
+            p = result.iloc[0]
+
+            st.success(f"Point found: {p['Point ID']}")
+
+            st.write(f"**Latitude:** {p['Latitude']:.8f}")
+            st.write(f"**Longitude:** {p['Longitude']:.8f}")
+            st.write(f"**Ellipsoidal height:** {p['Height']:.3f} m")
+
+            maps_url = f"https://www.google.com/maps?q={p['Latitude']},{p['Longitude']}"
+            st.link_button("📍 Open in Google Maps", maps_url)
